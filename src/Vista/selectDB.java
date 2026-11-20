@@ -28,40 +28,33 @@ public class selectDB extends javax.swing.JFrame {
      */
     public selectDB() {
         initComponents();
-        Conectar cc = new Conectar();
-        Connection cn = cc.conexion();
-        //Connection conexion = Conectar();
-         if (cn != null)
-        {
-                  jLabel2.setText("¡Conectado correctamente!");
-        }
         cargar();
     }
 
     void cargar() {
         String[] titulos = {"Codigo", "Nombre", "Apellidos", "Cedulas", "Zona", "Celular", "Activo"};
-        String[] registros = new String[7];
-        String stringSQL = "Select * from usuarios";
         model = new DefaultTableModel(null, titulos);
         Conectar cc = new Conectar();
-        Connection cn = cc.conexion();
-        Statement st;
-        try {
-            st = cn.createStatement();
-            ResultSet rs = st.executeQuery(stringSQL);
+        try (Connection cn = cc.abrirConexion();
+             Statement st = cn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT id, nombres, apellidos, cedulas, zona, celular, activo FROM usuarios ORDER BY id")) {
+            jLabel2.setText("¡Conectado correctamente!");
             while (rs.next()) {
-                registros[0] = rs.getString("id");
-                registros[1] = rs.getString("nombres");
-                registros[2] = rs.getString("apellidos");
-                registros[3] = rs.getString("cedulas");
-                registros[4] = rs.getString("zona");
-                registros[5] = rs.getString("celular");
-                registros[6] = rs.getString("activo");
-                model.addRow(registros);
+                model.addRow(new String[]{
+                    rs.getString("id"),
+                    rs.getString("nombres"),
+                    rs.getString("apellidos"),
+                    rs.getString("cedulas"),
+                    rs.getString("zona"),
+                    rs.getString("celular"),
+                    rs.getString("activo")
+                });
             }
             jTable1.setModel(model);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, ex);
+        } catch (ClassNotFoundException | SQLException ex) {
+            jLabel2.setText("Sin conexión a la base de datos.");
+            jTable1.setModel(model);
+            JOptionPane.showMessageDialog(null, "Error al cargar usuarios: " + ex.getMessage());
             Logger.getLogger(selectDB.class.getName()).log(Level.SEVERE, null, ex);
         }
 

@@ -2,9 +2,11 @@ package Vista;
 
 import Modulos.Conectar;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -29,40 +31,47 @@ public class Busqueda extends javax.swing.JFrame {
     public Busqueda() {
         initComponents();
         cargar("");
-        Conectar cc = new Conectar();
-        Connection cn = cc.conexion();
-        //Connection conexion = Conectar();
-        if (cn != null) {
-            jLabel3.setText("¡Conectado correctamente!");
+    }
+
+    public static List<String[]> buscarUsuarios(Connection cn, String valor) throws SQLException {
+        List<String[]> filas = new ArrayList<>();
+        String filtro = "%" + (valor == null ? "" : valor.trim()) + "%";
+        String sql = "SELECT id, nombres, apellidos, cedulas, zona, celular, activo "
+            + "FROM Usuarios WHERE nombres ILIKE ? OR apellidos ILIKE ? ORDER BY id";
+        try (PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setString(1, filtro);
+            ps.setString(2, filtro);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    filas.add(new String[]{
+                        rs.getString("id"),
+                        rs.getString("nombres"),
+                        rs.getString("apellidos"),
+                        rs.getString("cedulas"),
+                        rs.getString("zona"),
+                        rs.getString("celular"),
+                        rs.getString("activo")
+                    });
+                }
+            }
         }
+        return filas;
     }
 
     void cargar(String Valor) {
         String[] titulos = {"Codigo", "Nombre", "Apellidos", "Cedulas", "Zona", "Celular", "Activo"};
-        String[] registros = new String[7];
-        String stringSQL = "Select * from Usuarios where nombres LIKE '%" + Valor + "%'";
         model = new DefaultTableModel(null, titulos);
         Conectar cc = new Conectar();
-        Connection cn = cc.conexion();
-        Statement st;
-
-        try {
-            st = cn.createStatement();
-            ResultSet rs = st.executeQuery(stringSQL);
-            while (rs.next()) {
-                //`cli_id`, `nom_cli`, `ape_cli`, `ciu_cli, 'tel_cli'
-                registros[0] = rs.getString("id");
-                registros[1] = rs.getString("nombres");
-                registros[2] = rs.getString("apellidos");
-                registros[3] = rs.getString("cedulas");
-                registros[4] = rs.getString("zona");
-                registros[5] = rs.getString("celular");
-                registros[6] = rs.getString("activo");
-                model.addRow(registros);
+        try (Connection cn = cc.abrirConexion()) {
+            jLabel3.setText("¡Conectado correctamente!");
+            for (String[] fila : buscarUsuarios(cn, Valor)) {
+                model.addRow(fila);
             }
             tbDatos.setModel(model);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, ex);
+        } catch (ClassNotFoundException | SQLException ex) {
+            jLabel3.setText("Sin conexión a la base de datos.");
+            tbDatos.setModel(model);
+            JOptionPane.showMessageDialog(null, "Error al consultar usuarios: " + ex.getMessage());
             Logger.getLogger(Busqueda.class.getName()).log(Level.SEVERE, null, ex);
         }
 
@@ -191,32 +200,7 @@ public class Busqueda extends javax.swing.JFrame {
     }//GEN-LAST:event_txtBusquedaKeyReleased
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-        String Insert = "";
-        String[] registros = new String[7];
-        Insert = jTextField1.getText();
-        Conectar cc = new Conectar();
-        Connection cn = cc.conexion();
-        Statement st;
-        try {
-            st = cn.createStatement();
-            ResultSet rs = st.executeQuery(Insert);
-            while (rs.next()) {
-                
-                registros[0] = rs.getString("id");
-                registros[1] = rs.getString("nombres");
-                registros[2] = rs.getString("apellidos");
-                registros[3] = rs.getString("cedulas");
-                registros[4] = rs.getString("zona");
-                registros[5] = rs.getString("celular");
-                registros[6] = rs.getString("activo");
-                model.addRow(registros);
-            }
-            tbDatos.setModel(model);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, ex);
-            Logger.getLogger(Busqueda.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        cargar(jTextField1.getText());
     }//GEN-LAST:event_jButton1ActionPerformed
 
     /**
